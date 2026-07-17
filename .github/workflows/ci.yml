@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify package
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Activate pinned pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.9.0 --activate
+          pnpm --version
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build package
+        run: pnpm build
+
+      - name: Verify packed artifact in a clean consumer
+        shell: bash
+        run: |
+          set -euo pipefail
+          pack_dir="$RUNNER_TEMP/navi-ui-pack"
+          consumer_dir="$RUNNER_TEMP/navi-ui-consumer"
+          mkdir -p "$pack_dir" "$consumer_dir"
+          pnpm pack --pack-destination "$pack_dir"
+          tarball="$(find "$pack_dir" -maxdepth 1 -name 'navi-ui-*.tgz' -print -quit)"
+          test -n "$tarball"
+          cd "$consumer_dir"
+          npm init --yes >/dev/null
+          npm install --ignore-scripts "$tarball" react@19.2.7 react-dom@19.2.7 >/dev/null
+          node --input-type=module -e "const pkg = await import('navi-ui'); if (Object.keys(pkg).length === 0) throw new Error('navi-ui exports are empty')"
+          test -f node_modules/navi-ui/dist/navi-ui.css
