@@ -24,7 +24,7 @@ Ship Navi UI `v1.0.0` as a standalone, documented, tested package and use it as 
 - [ ] Documentation and release
   - [x] Create a visual playground and usage documentation.
   - [x] Consume the package from Dartio without copied component code.
-  - [ ] Publish GitHub repository and `v1.0.0` release.
+  - [x] Publish GitHub repository and `v1.0.0` release.
   - [ ] Publish npm package only after package/release gates pass.
 - [ ] Phase closure
   - [ ] Audit public API and delete unused abstractions.
